@@ -315,13 +315,13 @@ class LinkedListLong(BaseLong):
 
 if __name__ == '__main__':
 
-    for LongClass in (ArrayLong, DictLong, LinkedListLong):
-        print(LongClass.__name__)
+    for long_cls in (ArrayLong, DictLong, LinkedListLong):
+        print(long_cls.__name__)
         for _ in range(10000):
             n1 = randint(-10000, 10000)
             n2 = randint(-10000, 10000)
-            l1 = LongClass(n1)
-            l2 = LongClass(n2)
+            l1 = long_cls(n1)
+            l2 = long_cls(n2)
             assert str(l1) == str(n1)
             assert str(l2) == str(n2)
             assert l1 == l1
