@@ -257,14 +257,14 @@ class LinkedListLong(BaseLong):
     @dataclass
     class LinkedList:
 
+        head: Optional['LinkedListLong.LinkedList.ListNode'] = None
+        tail: Optional['LinkedListLong.LinkedList.ListNode'] = None
+
         @dataclass
         class ListNode:
             value: int
             next: Optional['LinkedListLong.LinkedList.ListNode'] = None
             previous: Optional['LinkedListLong.LinkedList.ListNode'] = None
-
-        head: Optional['LinkedListLong.LinkedList.ListNode'] = None
-        tail: Optional['LinkedListLong.LinkedList.ListNode'] = None
 
         def add_to_head(self, digit):
             node = LinkedListLong.LinkedList.ListNode(digit, self.head)
