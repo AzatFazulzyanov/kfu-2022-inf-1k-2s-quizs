@@ -24,7 +24,8 @@ from typing import Iterable, Optional, Dict
 
 class BaseLong(ABC):
     """
-    класс с общей логикой для всех внутренних представлений
+    абстрактный класс, реализующий необходимые операции требуя реализовать в наследниках только специфичные
+    для конкретной структуры данных операции
     """
     is_positive: bool = True
 
@@ -44,10 +45,12 @@ class BaseLong(ABC):
 
     @abstractmethod
     def add_digit_to_head(self, digit) -> None:
+        """добавление цифры в начало числа"""
         pass
 
     @abstractmethod
     def copy(self) -> 'BaseLong':
+        """создание копию данного объекта"""
         pass
 
     def _add_positives(self, other: 'BaseLong') -> 'BaseLong':
