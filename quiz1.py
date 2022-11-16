@@ -1,5 +1,5 @@
 # REQUIREMENTS
-# Реализовать класс поразрядного представления целого числа. Требуемые методы:
+# Реализовать класс поразрядного представления целого числа произвольного размера. Требуемые методы:
 # 1) конструктор, принимающий на вход целое число def __init__(self, number): ...
 # 2) сложение def __add__(self, other): ...
 # 3) вычитание def __sub__(self, other): ...
@@ -17,7 +17,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from itertools import zip_longest
+from itertools import zip_longest, chain
 from random import randint
 from typing import Iterable, Optional, Dict
 
@@ -33,52 +33,56 @@ class BaseLong(ABC):
         pass
 
     @abstractmethod
-    def ciphers_from_tail(self) -> Iterable[int]:
+    def digits_from_tail(self) -> Iterable[int]:
+        """обход цифр с конца(младшего разряда)"""
         pass
 
     @abstractmethod
-    def ciphers_from_head(self) -> Iterable[int]:
+    def digits_from_head(self) -> Iterable[int]:
+        """обход цифр с начала(старшего разряда)"""
         pass
 
     @abstractmethod
-    def add_cipher_to_head(self, cipher) -> None:
+    def add_digit_to_head(self, digit) -> None:
         pass
 
     @abstractmethod
     def copy(self) -> 'BaseLong':
         pass
 
-    def _add_positives(self, other) -> 'BaseLong':
+    def _add_positives(self, other: 'BaseLong') -> 'BaseLong':
+        """сложение двух чисел"""
         memory = 0
         result = self.__class__(None)
-        for cipher1, cipher2 in zip_longest(self.ciphers_from_tail(), other.ciphers_from_tail(), fillvalue=0):
-            cur_res = cipher1 + cipher2 + memory
-            result.add_cipher_to_head(cur_res % 10)
+        for digit1, digit2 in zip_longest(self.digits_from_tail(), other.digits_from_tail(), fillvalue=0):
+            cur_res = digit1 + digit2 + memory
+            result.add_digit_to_head(cur_res % 10)
             memory = cur_res // 10
         if memory > 0:
-            result.add_cipher_to_head(memory)
+            result.add_digit_to_head(memory)
 
         return result
 
     def _sub_positives_first_bigger(self, other):
+        """вычитание числе при условии что они положительные и первый больше"""
         if self == other:
             return self.__class__(0)
         memory = 0
         result = self.__class__(None)
         cache = 0
-        for cipher1, cipher2 in zip_longest(self.ciphers_from_tail(), other.ciphers_from_tail(), fillvalue=0):
-            cur_res = cipher1 - cipher2 + memory
-            cipher = cur_res % 10
-            if cipher == 0:
+        for digit1, digit2 in zip_longest(self.digits_from_tail(), other.digits_from_tail(), fillvalue=0):
+            cur_res = digit1 - digit2 + memory
+            digit = cur_res % 10
+            if digit == 0:
                 cache += 1
             else:
                 for _ in range(cache):
-                    result.add_cipher_to_head(0)
+                    result.add_digit_to_head(0)
                 cache = 0
-                result.add_cipher_to_head(cipher)
+                result.add_digit_to_head(digit)
             memory = cur_res // 10
         if memory < 0:
-            result.add_cipher_to_head(memory)
+            result.add_digit_to_head(memory)
 
         return result
 
@@ -90,6 +94,7 @@ class BaseLong(ABC):
         return new_one
 
     def _sub_positives(self, other) -> 'BaseLong':
+        """вычитание двух положительных чисел"""
         match self > other:
             case True:
                 return self._sub_positives_first_bigger(other)
@@ -97,6 +102,7 @@ class BaseLong(ABC):
                 return -other._sub_positives_first_bigger(self)
 
     def __sub__(self, other) -> 'BaseLong':
+        """вычитание двух чисел"""
         match self.is_positive, other.is_positive:
             case True, True:
                 return self._sub_positives(other)
@@ -108,6 +114,7 @@ class BaseLong(ABC):
                 return -(-self)._sub_positives(-other)
 
     def __add__(self, other: 'BaseLong') -> 'BaseLong':
+        """сложение двух чисел"""
         match self.is_positive, other.is_positive:
             case True, True:
                 return self._add_positives(other)
@@ -120,13 +127,13 @@ class BaseLong(ABC):
 
     def __str__(self):
         sign = '' if self.is_positive else '-'
-        return sign + ''.join(map(str, self.ciphers_from_head()))
+        return sign + ''.join(map(str, self.digits_from_head()))
 
     __repr__ = __str__
 
     def __eq__(self, other: 'BaseLong'):
-        for cipher1, cipher2 in zip_longest(self.ciphers_from_tail(), other.ciphers_from_tail(), fillvalue=0):
-            if cipher1 != cipher2:
+        for digit1, digit2 in zip_longest(self.digits_from_tail(), other.digits_from_tail(), fillvalue=0):
+            if digit1 != digit2:
                 return False
 
         return self.is_positive == other.is_positive
@@ -143,17 +150,17 @@ class BaseLong(ABC):
             case False, False:
                 sign = False
 
-        ciphers_from_head1 = list(self.ciphers_from_head())
-        ciphers_from_head2 = list(other.ciphers_from_head())
+        digits_from_head1 = list(self.digits_from_head())
+        digits_from_head2 = list(other.digits_from_head())
 
-        if len(ciphers_from_head1) > len(ciphers_from_head2):
+        if len(digits_from_head1) > len(digits_from_head2):
             return sign
-        if len(ciphers_from_head1) < len(ciphers_from_head2):
+        if len(digits_from_head1) < len(digits_from_head2):
             return not sign
-        for cipher1, cipher2 in zip(ciphers_from_head1, ciphers_from_head2):
-            if cipher1 > cipher2:
+        for digit1, digit2 in zip(digits_from_head1, digits_from_head2):
+            if digit1 > digit2:
                 return sign
-            if cipher1 < cipher2:
+            if digit1 < digit2:
                 return not sign
         return False
 
@@ -162,6 +169,10 @@ class BaseLong(ABC):
 
 
 class ArrayLong(BaseLong):
+    """
+    Класс поразрядного представления числа произвольного размера.
+    В качестве внутреннего представления использован массив цифр
+    """
 
     def __init__(self, number: Optional[int]) -> None:
         if number is None:
@@ -181,14 +192,14 @@ class ArrayLong(BaseLong):
 
             self._internal = list(reversed(_internal))
 
-    def ciphers_from_tail(self) -> Iterable[int]:
+    def digits_from_tail(self) -> Iterable[int]:
         yield from self._internal[::-1]
 
-    def ciphers_from_head(self) -> Iterable[int]:
+    def digits_from_head(self) -> Iterable[int]:
         yield from self._internal
 
-    def add_cipher_to_head(self, cipher) -> None:
-        self._internal.insert(0, cipher)
+    def add_digit_to_head(self, digit) -> None:
+        self._internal.insert(0, digit)
 
     def copy(self) -> 'BaseLong':
         new_copy = ArrayLong(None)
@@ -197,6 +208,10 @@ class ArrayLong(BaseLong):
 
 
 class DictLong(BaseLong):
+    """
+    Класс поразрядного представления числа произвольного размера.
+    В качестве внутреннего представления использован dict
+    """
 
     _internal: Dict[int, int] = None
 
@@ -215,14 +230,14 @@ class DictLong(BaseLong):
                     number = number // 10
                     i += 1
 
-    def ciphers_from_tail(self) -> Iterable[int]:
+    def digits_from_tail(self) -> Iterable[int]:
         yield from (self._internal[i] for i in range(len(self._internal)))
 
-    def ciphers_from_head(self) -> Iterable[int]:
+    def digits_from_head(self) -> Iterable[int]:
         yield from (self._internal[i] for i in range(len(self._internal)-1, -1, -1))
 
-    def add_cipher_to_head(self, cipher) -> None:
-        self._internal[len(self._internal)] = cipher
+    def add_digit_to_head(self, digit) -> None:
+        self._internal[len(self._internal)] = digit
 
     def copy(self) -> 'BaseLong':
         new_copy = DictLong(None)
@@ -231,6 +246,10 @@ class DictLong(BaseLong):
 
 
 class LinkedListLong(BaseLong):
+    """
+    Класс поразрядного представления числа произвольного размера.
+    В качестве внутреннего представления использован связный список
+    """
 
     @dataclass
     class LinkedList:
@@ -244,8 +263,8 @@ class LinkedListLong(BaseLong):
         head: Optional['LinkedListLong.LinkedList.ListNode'] = None
         tail: Optional['LinkedListLong.LinkedList.ListNode'] = None
 
-        def add_to_head(self, cipher):
-            node = LinkedListLong.LinkedList.ListNode(cipher, self.head)
+        def add_to_head(self, digit):
+            node = LinkedListLong.LinkedList.ListNode(digit, self.head)
             if self.head is not None:
                 self.head.previous = node
 
@@ -290,20 +309,20 @@ class LinkedListLong(BaseLong):
                     number = number // 10
                     i += 1
 
-    def ciphers_from_tail(self) -> Iterable[int]:
+    def digits_from_tail(self) -> Iterable[int]:
         node = self.linked_list.tail
         while node is not None:
             yield node.value
             node = node.previous
 
-    def ciphers_from_head(self) -> Iterable[int]:
+    def digits_from_head(self) -> Iterable[int]:
         node = self.linked_list.head
         while node is not None:
             yield node.value
             node = node.next
 
-    def add_cipher_to_head(self, cipher) -> None:
-        self.linked_list.add_to_head(cipher)
+    def add_digit_to_head(self, digit) -> None:
+        self.linked_list.add_to_head(digit)
 
     def copy(self) -> 'BaseLong':
         new_obj = LinkedListLong(None)
@@ -314,12 +333,15 @@ class LinkedListLong(BaseLong):
 
 
 if __name__ == '__main__':
+    MAX = 100000
+    MIN = -100000
+    SIZE = 10000
+    rnd_ints = [(randint(MIN, MAX), randint(MIN, MAX)) for _ in range(SIZE)]
+    with_zeros = [(0, randint(MIN, MAX)), (randint(MIN, MAX), 0), (0, 0)]
 
     for long_cls in (ArrayLong, DictLong, LinkedListLong):
         print(long_cls.__name__)
-        for _ in range(10000):
-            n1 = randint(-10000, 10000)
-            n2 = randint(-10000, 10000)
+        for n1, n2 in chain(with_zeros, rnd_ints):
             l1 = long_cls(n1)
             l2 = long_cls(n2)
             assert str(l1) == str(n1)
